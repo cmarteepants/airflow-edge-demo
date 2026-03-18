@@ -353,3 +353,20 @@ M1.10 (systemd) and M1.13 (DAG sync automation) can wait until hardening phase.
 1. M3.3 — Test LED brightness in a lit room
 2. M4.8 — Pack hardware: Pi, panel, power supply, ribbon cable, USB-C cable, laptop charger
 3. One more confidence run if time allows
+
+### Also completed later this session
+
+- **`./demo` CLI**: single entrypoint for all demo commands (start, preflight, sim, sync)
+- Moved `NOTES.md` to `docs/NOTES.md`
+- Updated PR description, all pushed to PR #9
+
+### Final state for March 21
+
+Everything works end-to-end. The demo flow is:
+1. Power on Pi (systemd auto-starts edge worker + LED display → panel shows "PYCASCADES")
+2. `./demo start` on laptop (Docker Compose + zoom monitor + unpause DAG)
+3. `./demo preflight` to verify (12/12 checks)
+4. Join Zoom → ON AIR. Leave → FREE. Automatic continuous looping.
+5. `./demo sim reset` to return to idle if needed.
+
+Tested: 3 full end-to-end cycles (1 sim, 2 real Zoom), failure recovery (systemd restart, Docker restart, zoom monitor restart), all passing.
