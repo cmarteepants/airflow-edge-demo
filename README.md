@@ -66,14 +66,15 @@ Full setup details are in [`docs/startup.md`](docs/startup.md). The short versio
 cp .env.example .env   # set JWT secret and EDGE_HOST_IP
 
 # 2. Start everything (Docker, zoom monitor, DAG)
-./scripts/start-demo.sh
+./demo start
 
 # 3. Verify all components are healthy
-./scripts/preflight.sh
+./demo preflight
 
 # 4. Join a Zoom call (or simulate one)
-./scripts/zoom-sim.sh start   # fake a meeting start
-./scripts/zoom-sim.sh end     # fake a meeting end
+./demo sim start    # fake a meeting start
+./demo sim end      # fake a meeting end
+./demo sim reset    # return panel to idle
 ```
 
 The Airflow UI is at [http://localhost:8081](http://localhost:8081) (admin / admin).
@@ -81,8 +82,9 @@ The Airflow UI is at [http://localhost:8081](http://localhost:8081) (admin / adm
 ## Project Structure
 
 ```text
+demo                         # CLI entrypoint: ./demo start|preflight|sim|sync
 dags/
-  led_sign_dag.py          # The DAG: sensors + edge tasks in one graph
+  led_sign_dag.py            # The DAG: sensors + edge tasks in one graph
 scripts/
   zoom_monitor.py          # macOS-native Zoom detection (polls CptHost process)
   zoom-sim.sh              # Simulate Zoom start/end without a real meeting
