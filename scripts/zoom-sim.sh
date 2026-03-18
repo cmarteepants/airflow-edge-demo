@@ -1,6 +1,6 @@
 #!/bin/bash
 # Simulate Zoom meeting start/end for DAG testing.
-# Usage: ./scripts/zoom-sim.sh start | end | status
+# Usage: ./scripts/zoom-sim.sh start | end | status | reset
 
 FLAG="$(dirname "$0")/../zoom-state/active"
 
@@ -20,8 +20,12 @@ case "$1" in
       echo "FREE (no flag)"
     fi
     ;;
+  reset)
+    ssh airflow-demo 'rm -f /tmp/led-state.json'
+    echo "LED panel reset to idle (state file deleted on Pi)"
+    ;;
   *)
-    echo "Usage: $0 {start|end|status}"
+    echo "Usage: $0 {start|end|status|reset}"
     exit 1
     ;;
 esac

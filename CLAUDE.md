@@ -23,7 +23,7 @@ Edge3 3.2.0 is not in the Airflow 3.1.8 constraints file (which pins 3.1.0), but
 - **Laptop**: Airflow 3 via Docker Compose + a native macOS Zoom monitor script. No Astro/vendor dependency.
 - **Pi Zero 2 W**: Edge Worker only (full `apache-airflow` pip install required, but no server components). Connects to laptop via Tailscale.
 - **Zoom detection**: `scripts/zoom_monitor.py` runs natively on macOS, polls for `CptHost` process (Zoom's meeting process). Creates `zoom-state/active` (repo-relative flag file) when a meeting starts, deletes it when it ends. Docker bind-mounts `./zoom-state:/tmp/zoom-state:ro` into all Airflow containers. Use `scripts/zoom-sim.sh start|end|status` to simulate without Zoom.
-- **LED display**: A persistent service (`scripts/led_display.py`) on the Pi reads `/tmp/led-state.json` and drives the panel. Airflow tasks write to the state file and exit — they do NOT hold GPIO or run persistently. This avoids Airflow task timeouts and GPIO conflicts.
+- **LED display**: A persistent service (`scripts/led_display.py`) on the Pi reads `/tmp/led-state.json` and drives the panel. Three states: **idle** (dim "PYCASCADES" — default when no state file), **ON AIR** (red), **FREE** (green). Airflow tasks write to the state file and exit — they do NOT hold GPIO or run persistently. Use `zoom-sim.sh reset` to delete the state file and return to idle.
 - See `docs/architecture.md` for full system diagram and data flow.
 
 ### Rejected Approaches
@@ -89,7 +89,7 @@ The `secret_key` config moved from `[webserver]` to `[api]` in Airflow 3. Use `A
 
 ## Important Constraints
 
-- All polling intervals (zoom monitor, sensor, edge worker job poll, scheduler) should be tuned low for demo responsiveness — target <10s end-to-end latency.
+- All polling intervals at 1s (zoom monitor, sensor poke, scheduler heartbeat, edge job poll, UI auto-refresh). Average end-to-end latency ~3.5s.
 - Edge worker and LED display on Pi run as systemd services (`edge-worker`, `led-display`) — auto-restart on crash, auto-start on boot. Unit files in `scripts/systemd/`.
 - Docker images must be pre-cached before the conference (no WiFi dependency).
 - Scheduler health check must be explicitly enabled: `AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK=true` (disabled by default in Airflow 3).

@@ -282,13 +282,22 @@ M1.10 (systemd) and M1.13 (DAG sync automation) can wait until hardening phase.
 - **`pgrep -f "airflow edge worker"` doesn't match systemd process**: The systemd-managed process shows as `/home/constance/airflow-edge-venv/bin/python3 ... airflow edge worker`. Switched preflight check to use `systemctl is-active` instead.
 - **Edge3 provider has no public REST API for listing workers**: `/api/v2/edge/workers` returns 404. Changed preflight to check edge worker connection via journalctl logs instead.
 
+### Also completed later this session
+
+- **M4.2 — Failure recovery testing**: all three scenarios pass:
+  - Kill edge worker on Pi → systemd restarts with new PID (`Restart=always`)
+  - `docker compose down` + `start-demo.sh` → healthy in ~12s, DAG still unpaused
+  - Kill zoom monitor → `start-demo.sh` detects and restarts it
+- **M4.3 — Docker images pre-cached** via `docker compose pull`
+- Fixed `start-demo.sh` health check (JSON field order bug) and `preflight.sh` edge worker log check
+- Fixed systemd `Restart=on-failure` → `Restart=always` (SIGTERM wasn't triggering restart)
+- Cleaned up orphan nohup edge worker process on Pi
+
 ### What's not done
 
 - M2.9 — polling interval tuning (current latency is acceptable but not measured precisely)
 - M3.3 — LED brightness tuning for stage
-- M4.1 — Test full pipeline 3+ times (did it once with real Zoom, once earlier with sim)
-- M4.2 — Failure recovery testing
-- M4.3 — Pre-cache Docker images
+- M4.1 — Test full pipeline 3+ times (done twice — once real Zoom, once sim — need one more)
 - M4.7 — README.md
 - M4.8 — Pack hardware
 
@@ -299,8 +308,48 @@ M1.10 (systemd) and M1.13 (DAG sync automation) can wait until hardening phase.
 
 ### Next session: start here
 
-**Remaining hardening before March 21.** Priority:
-1. M4.1 — Run the full pipeline 3+ times (real Zoom or sim) to build confidence
-2. M4.2 — Failure recovery: restart edge worker, restart Docker, kill Tailscale
-3. M4.3 — `docker compose pull` to pre-cache images
-4. M4.7 — README.md for the public repo (can be quick)
+**Final polish before March 21.** Priority:
+1. M4.1 — One more full end-to-end test for confidence
+2. M4.7 — README.md for the public repo
+3. M3.3 — LED brightness check (bring panel to a lit room)
+4. M4.8 — Pack hardware
+
+---
+
+## Session 7 — March 18, 2026
+
+### What's working
+
+- **Three LED states**: idle (dim "PYCASCADES"), ON AIR (red), FREE (green) — with fade transitions between all
+- **`zoom-sim.sh reset`**: deletes state file on Pi, returns panel to idle
+- **All polling intervals at 1s**: zoom monitor, sensor poke, scheduler heartbeat, edge job poll, UI auto-refresh. Avg latency ~3.5s.
+- **`scripts/sync-dags.sh`**: rsync wrapper for DAG deployment to Pi
+- **`README.md`**: full project README with architecture diagram, quick start, project structure
+- **Another successful end-to-end test with real Zoom**: idle → ON AIR → FREE, continuous chaining confirmed
+
+### Issues found and fixed
+
+- **SCP'd `pi-edge-env.sh` overwrote JWT secret**: deploying the repo template to Pi replaced the real JWT secret with `CHANGE_ME`, causing 403 Forbidden. Fixed by editing Pi's copy directly. Added gotcha.
+- **`start-demo.sh` health check JSON parsing**: grep assumed field order in `docker compose ps --format json` output. Fixed with python parser (from earlier this session, included in this branch).
+
+### Gotchas learned
+
+- Don't SCP `pi-edge-env.sh` over the Pi's configured copy — the repo template has `CHANGE_ME` as the JWT secret default. Edit the Pi's copy directly or set `JWT_SECRET` as an env var.
+
+### What's not done
+
+- M3.3 — LED brightness tuning for stage (current defaults look fine at desk distance)
+- M4.1 — Need one more end-to-end rep (done 3 total: 1 sim, 2 real Zoom)
+- M4.8 — Pack hardware
+
+### Open questions
+
+- [ ] LED brightness for stage lighting
+- [ ] Zoom monitor process stability — no recurrence since restart earlier, but worth watching
+
+### Next session: start here
+
+**Demo is essentially ready.** Remaining before March 21:
+1. M3.3 — Test LED brightness in a lit room
+2. M4.8 — Pack hardware: Pi, panel, power supply, ribbon cable, USB-C cable, laptop charger
+3. One more confidence run if time allows

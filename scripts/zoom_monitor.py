@@ -16,7 +16,7 @@ import time
 
 STATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "zoom-state")
 FLAG_FILE = os.path.join(STATE_DIR, "active")
-POLL_INTERVAL = 2  # seconds
+POLL_INTERVAL = 1  # seconds
 
 
 def is_in_meeting() -> bool:

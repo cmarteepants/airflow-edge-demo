@@ -16,14 +16,14 @@ PyCascades presentation: March 21, 2026.
 - [x] **M1.10** Create systemd services for edge worker + LED display on Pi — auto-restart on crash, auto-start on boot (`scripts/systemd/`)
 - [x] **M1.11** Start edge worker on Pi, confirm it appears in Airflow UI under Admin → Edge Workers
 - [x] **M1.12** Write a hello-world DAG with `@task(executor="edge3", queue="raspberry_pi")` — ran successfully on Pi
-- [ ] **M1.13** Script or document DAG sync mechanism to Pi — rsync working manually, not yet automated
+- [x] **M1.13** DAG sync script: `scripts/sync-dags.sh` (rsync wrapper)
 
 ## LED Display
 
 - [x] **M2.1** Design LED display states: "ON AIR" (red text, red border, blinking dot on black) and "FREE" (green text, green border on black)
 - [x] **M2.2** Write persistent LED display service (`scripts/led_display.py`) on Pi — reads `/tmp/led-state.json`, drives panel, fade transitions between states
 - [x] **M2.3** Install `rgbmatrix` Python bindings on Pi (system Python, Makefile build with Pillow shim stub)
-- [x] **M2.4** "FREE" is the default/idle state — shown on startup and when state file is missing
+- [x] **M2.4** Three display states: "idle" (dim "PYCASCADES" on boot), "ON AIR" (red), "FREE" (green). `zoom-sim.sh reset` returns to idle.
 
 ## Zoom Monitor & DAG
 
@@ -31,7 +31,7 @@ PyCascades presentation: March 21, 2026.
 - [x] **M2.6** Add bind mount `./zoom-state:/tmp/zoom-state:ro` in Docker Compose
 - [x] **M2.7** Write the DAG: `wait_for_meeting_start → set_on_air → wait_for_meeting_end → set_free`, `@continuous` scheduling, `mode="poke"` sensors
 - [x] **M2.8** `scripts/zoom-sim.sh` — simulate Zoom start/end/status for testing without real Zoom
-- [ ] **M2.9** Tune polling intervals for demo responsiveness — target under 10s end-to-end (current: ~5s sensor poll + edge worker latency)
+- [x] **M2.9** Polling intervals tuned to 1s across the board (monitor, sensor, scheduler, edge poll). UI refresh 1s. Avg latency ~3.5s.
 - [x] **M2.10** Test with real Zoom: join call → confirm LED shows ON AIR → leave → confirm FREE
 
 ## End-to-End Testing & Polish
@@ -43,12 +43,12 @@ PyCascades presentation: March 21, 2026.
 ## Hardening & Demo Prep
 
 - [ ] **M4.1** Test full pipeline 3+ times end-to-end
-- [ ] **M4.2** Test failure recovery: restart edge worker, restart Airflow, kill Tailscale and reconnect
-- [ ] **M4.3** Pre-cache all Docker images (no conference WiFi dependency)
+- [x] **M4.2** Test failure recovery: kill edge worker (systemd restarts), restart Docker Compose (pipeline resumes), kill zoom monitor (start-demo.sh recovers)
+- [x] **M4.3** Pre-cache all Docker images (no conference WiFi dependency)
 - [x] **M4.4** Document startup sequence (`docs/startup.md`)
 - [x] **M4.5** Write `scripts/start-demo.sh` — single command to launch Docker Compose, wait for health checks, print status
 - [x] **M4.6** Write `scripts/preflight.sh` — verify all services up, edge worker connected, panel reachable (12 checks)
-- [ ] **M4.7** Write a proper `README.md` for the public repo
+- [x] **M4.7** Write a proper `README.md` for the public repo
 - [ ] **M4.8** Pack hardware: Pi, panel, power supply, cables, laptop charger
 - [x] **M4.9** M1.9 — passwordless sudo on Pi
 - [x] **M4.10** M1.10 — systemd services for edge worker + LED display on Pi

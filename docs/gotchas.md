@@ -60,6 +60,18 @@ The `AIRFLOW__CORE__DAGS_FOLDER` in `~/pi-edge-env.sh` points to `$HOME/airflow-
 ### EdgeDBManager must be explicitly configured or edge tables silently won't exist
 Set `AIRFLOW__DATABASE__EXTERNAL_DB_MANAGERS=airflow.providers.edge3.models.db.EdgeDBManager` on all server components. Without this, `airflow db migrate` won't create edge-specific tables, and edge worker registration/job queueing will fail with confusing database errors. No warning is logged if it's missing.
 
+### Don't SCP `pi-edge-env.sh` over the Pi's configured copy
+The repo template has `JWT_SECRET:-CHANGE_ME` as the default. The Pi's deployed copy has the real secret. If you SCP the template to update other values (like poll intervals), you'll overwrite the secret and get `403 Forbidden` from the API server. Edit the Pi's copy directly, or set `JWT_SECRET` as an env var.
+
+### Zoom monitor can silently stop detecting state changes
+The long-running `zoom_monitor.py` process stopped creating/deleting the flag file despite `CptHost` running. Killing and restarting fixed it. Root cause unclear — possibly a `pgrep` subprocess hang. If the sensor seems stuck, check `zoom-state/active` manually and restart the monitor.
+
+### Systemd `Restart=on-failure` won't restart on SIGTERM
+Edge worker and LED display services initially used `Restart=on-failure`. Killing the process sends SIGTERM, which is a clean exit (code 0) — systemd doesn't consider it a failure. Use `Restart=always` for demo reliability.
+
+### `docker compose ps --format json` field order is not guaranteed
+The JSON output puts fields in arbitrary order. Don't grep for `"service_name".*"healthy"` — the Health field may appear before Service. Parse with python or jq instead.
+
 ---
 
 ## Installation
