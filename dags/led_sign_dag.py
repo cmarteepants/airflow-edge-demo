@@ -29,14 +29,14 @@ LED_STATE = "/tmp/led-state.json"
     start_date=datetime(2026, 3, 1),
 )
 def led_sign():
-    @task.sensor(poke_interval=2, timeout=86400, mode="poke")
+    @task.sensor(poke_interval=1, timeout=86400, mode="poke")
     def wait_for_meeting_start() -> PokeReturnValue:
         found = os.path.exists(ZOOM_FLAG)
         if found:
             print(f"Zoom meeting detected: {ZOOM_FLAG} exists")
         return PokeReturnValue(is_done=found)
 
-    @task.sensor(poke_interval=2, timeout=86400, mode="poke")
+    @task.sensor(poke_interval=1, timeout=86400, mode="poke")
     def wait_for_meeting_end() -> PokeReturnValue:
         ended = not os.path.exists(ZOOM_FLAG)
         if ended:

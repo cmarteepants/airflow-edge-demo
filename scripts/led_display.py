@@ -6,6 +6,7 @@ Watches ~/led-state.json and drives a 64x32 RGB LED matrix panel.
 Airflow tasks write to the state file; this service reads it and updates the display.
 
 States:
+  - "idle":   "PYCASCADES" in dim blue (default when no state file exists)
   - "on_air": "ON AIR" in red on black, with a blinking red dot (~1Hz)
   - "free":   "FREE" in green on black
 
@@ -47,13 +48,13 @@ def create_matrix():
 
 
 def read_state():
-    """Read the current status from the state file. Defaults to 'free' if missing/invalid."""
+    """Read the current status from the state file. Defaults to 'idle' if missing/invalid."""
     try:
         with open(STATE_FILE) as f:
             data = json.load(f)
-        return data.get("status", "free")
+        return data.get("status", "idle")
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
-        return "free"
+        return "idle"
 
 
 def draw_border(canvas, r, g, b):
@@ -97,20 +98,35 @@ def draw_free(canvas, font):
     graphics.DrawText(canvas, font, text_x, text_y, green, "FREE")
 
 
+def draw_idle(canvas, idle_font):
+    """Draw 'PYCASCADES' in dim blue, centered."""
+    dim_blue = graphics.Color(30, 30, 80)
+    text_x = 2
+    text_y = 20
+    graphics.DrawText(canvas, idle_font, text_x, text_y, dim_blue, "PYCASCADES")
+
+
 FADE_STEPS = 5
 FADE_FRAME_TIME = 0.05  # 50ms per frame → 250ms per fade direction, 500ms total
 
 
-def fade_transition(matrix, canvas, font, old_status, new_status):
+def _draw_status(canvas, font, idle_font, status, dot_visible=True):
+    """Draw the given status on the canvas."""
+    if status == "on_air":
+        draw_on_air(canvas, font, dot_visible)
+    elif status == "free":
+        draw_free(canvas, font)
+    elif status == "idle":
+        draw_idle(canvas, idle_font)
+
+
+def fade_transition(matrix, canvas, font, idle_font, old_status, new_status):
     """Fade out the old state, then fade in the new state."""
     # Fade out
     for i in range(FADE_STEPS, 0, -1):
         matrix.brightness = int(100 * i / FADE_STEPS)
         canvas.Clear()
-        if old_status == "on_air":
-            draw_on_air(canvas, font, True)
-        elif old_status == "free":
-            draw_free(canvas, font)
+        _draw_status(canvas, font, idle_font, old_status)
         canvas = matrix.SwapOnVSync(canvas)
         time.sleep(FADE_FRAME_TIME)
 
@@ -123,10 +139,7 @@ def fade_transition(matrix, canvas, font, old_status, new_status):
     for i in range(1, FADE_STEPS + 1):
         matrix.brightness = int(100 * i / FADE_STEPS)
         canvas.Clear()
-        if new_status == "on_air":
-            draw_on_air(canvas, font, True)
-        elif new_status == "free":
-            draw_free(canvas, font)
+        _draw_status(canvas, font, idle_font, new_status)
         canvas = matrix.SwapOnVSync(canvas)
         time.sleep(FADE_FRAME_TIME)
 
@@ -135,10 +148,13 @@ def fade_transition(matrix, canvas, font, old_status, new_status):
 
 
 def main():
-    # Load font BEFORE creating matrix — RGBMatrix drops root privileges after
+    # Load fonts BEFORE creating matrix — RGBMatrix drops root privileges after
     # init, so file reads must happen while we're still root.
     font = graphics.Font()
     font.LoadFont(os.path.join(FONT_DIR, "9x18B.bdf"))
+
+    idle_font = graphics.Font()
+    idle_font.LoadFont(os.path.join(FONT_DIR, "6x12.bdf"))
 
     matrix = create_matrix()
     canvas = matrix.CreateFrameCanvas()
@@ -152,7 +168,9 @@ def main():
         status = read_state()
 
         if status != last_status and last_status is not None:
-            canvas = fade_transition(matrix, canvas, font, last_status, status)
+            canvas = fade_transition(
+                matrix, canvas, font, idle_font, last_status, status
+            )
             print(f"Status changed: {last_status} → {status}")
             last_status = status
             dot_visible = True
@@ -166,11 +184,13 @@ def main():
         elif status == "free":
             draw_free(canvas, font)
             dot_visible = True  # reset so dot starts visible on next on_air
+        elif status == "idle":
+            draw_idle(canvas, idle_font)
 
         canvas = matrix.SwapOnVSync(canvas)
 
-        if last_status is None and status != "off":
-            print(f"Status changed: {last_status} → {status}")
+        if last_status is None:
+            print(f"Initial state: {status}")
 
         last_status = status
         time.sleep(POLL_INTERVAL)
