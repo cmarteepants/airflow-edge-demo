@@ -161,3 +161,57 @@ Running session log. Append only — newest entries at the bottom.
 5. M2.10 — First manual end-to-end test
 
 M1.10 (systemd) and M1.13 (DAG sync automation) can wait until hardening phase.
+
+---
+
+## Session 4 — March 18, 2026
+
+### What's working
+
+- **LED display service fully working on Pi** — `scripts/led_display.py` reads `/tmp/led-state.json`, drives 64×32 RGB panel
+  - "ON AIR": red text, red border, blinking red dot (~1Hz)
+  - "FREE": green text, green border (also the default/idle state)
+  - Fade transitions (~500ms) between states via matrix brightness
+  - Font: 9x18B, "ON" and "AIR" drawn separately with custom 5px gap
+  - Double-buffered rendering via `SwapOnVSync`
+- **`rgbmatrix` Python bindings installed** on Pi system Python (Makefile build, Pillow shim stubbed out)
+- **Zoom process detection confirmed** — `pgrep CptHost` reliably detects meeting start/end on macOS
+
+### What's not working / not done
+
+- No Zoom monitor script yet (`scripts/zoom_monitor.py`)
+- No DAG yet (sensor + edge task with continuous scheduling)
+- No Docker Compose bind mount for zoom status file
+- Edge worker not currently running on Pi (was stopped during LED testing)
+- M1.9 (passwordless sudo) and M1.10 (systemd) deferred to hardening
+
+### Major architecture change this session
+
+**Replaced Kafka/Redpanda/Asset event-driven architecture with a simpler sensor-based approach.** Motivation:
+- The talk abstract is about Edge Executor and physical-world orchestration, not event-driven scheduling
+- Kafka + Redpanda + AssetWatcher added infrastructure complexity without serving the talk's message
+- Sensor + continuous scheduling is standard Airflow patterns, matching the abstract ("familiar Airflow patterns")
+- Zoom detection via macOS process inspection (`CptHost`) works offline — no API, no auth, no internet
+- Removed: Redpanda container, Kafka provider dependency, Asset/AssetWatcher, zoom-bridge service, `produce_event.py`
+- Added: `zoom_monitor.py` (macOS native), continuous DAG scheduling, Docker bind mount
+
+### Gotchas learned
+
+- `RGBMatrix` drops root privileges after init (uid 0 → uid 1/daemon). Load fonts BEFORE creating the matrix. State file must be in a world-readable location (`/tmp`), not under `/home`.
+- `rpi-rgb-led-matrix` post-Feb 2026 switched to scikit-build-core — too heavy for Pi Zero. Roll back bindings to commit `076c54b`, stub out `pillow.c`, build with make.
+- Pi `/tmp` is a 209MB tmpfs — pip builds overflow it. Use `TMPDIR=~/tmp` for large builds.
+- `sudo` on Pi doesn't inherit `PATH` — use full paths like `/usr/bin/python3`.
+- `sudo pkill` on Pi can kill the SSH session — use `sudo kill $(pgrep -f ...)` in a separate SSH call.
+
+### Open questions
+
+- [ ] LED display design — final brightness tuning for stage (current default is fine for desk, may need adjustment for stage lighting)
+
+### Next session: start here
+
+**M2.5–M2.9 — Zoom monitor + DAG**. The LED display is done. Priority is now:
+1. M2.5 — Write `scripts/zoom_monitor.py` (poll `CptHost`, write `/tmp/zoom-status.json`)
+2. M2.6 — Add bind mount in Docker Compose for the zoom status file
+3. M2.7 — Write the DAG: continuous scheduling, sensor reads zoom status (LocalExecutor), LED task on Pi (EdgeExecutor)
+4. M2.8 — Tune intervals
+5. M2.9 — First end-to-end test: join/leave Zoom → LED updates
