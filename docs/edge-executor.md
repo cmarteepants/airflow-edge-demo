@@ -8,7 +8,7 @@ The Edge Executor uses a **pull-based architecture**. Edge Workers do NOT receiv
 
 - **Scheduler** with `EdgeExecutor` loaded — writes queued tasks into an `EdgeJobModel` database table
 - **API Server** with edge plugin enabled (`api_enabled = True`) — exposes REST endpoints at `/edge_worker/v1/rpcapi`
-- **Triggerer** — needed for the KafkaMessageQueueTrigger / AssetWatcher
+- **Triggerer** — runs deferred operators and triggers
 - **PostgreSQL** — stores edge job queue, worker state, edge logs
 
 ### Remote Edge Worker (Raspberry Pi)
