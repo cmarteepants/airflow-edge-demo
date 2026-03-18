@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PyCascades 2026 demo (presenting March 21): a busy/on-air sign on an RGB LED matrix panel, orchestrated by Apache Airflow 3 (open source). Showcases two Airflow 3 features: **Edge Executor** and **event-driven scheduling via Assets**.
+PyCascades 2026 demo (presenting March 21): a busy/on-air sign on an RGB LED matrix panel, orchestrated by Apache Airflow 3 (open source). Showcases two Airflow 3 features: **Edge Executor** (running tasks on IoT hardware) and **multi-executor task routing** (sensor on laptop, LED task on Pi, in one DAG).
 
-Flow: Zoom status change → Kafka topic (Redpanda) → Airflow Asset event → Edge Worker on Raspberry Pi → LED panel update.
+Flow: Zoom meeting detected via macOS process inspection → Airflow sensor detects change → Edge Worker on Raspberry Pi updates LED panel.
 
 ## Pinned Versions
 
@@ -14,25 +14,24 @@ Flow: Zoom status change → Kafka topic (Redpanda) → Airflow Asset event → 
 |---|---|
 | `apache-airflow` | 3.1.8 |
 | `apache-airflow-providers-edge3` | 3.2.0 (overrides constraint; needed for worker concurrency control) |
-| `apache-airflow-providers-apache-kafka` | 1.13.0 |
 | `apache/airflow` Docker image | `3.1.8` |
-| `redpandadata/redpanda` Docker image | `v25.3.10` |
 
 Edge3 3.2.0 is not in the Airflow 3.1.8 constraints file (which pins 3.1.0), but its PyPI metadata declares `>=3.0.0` compatibility. Install with constraints first, then upgrade edge3 separately.
 
 ## Architecture
 
-- **Laptop**: Airflow 3 + Redpanda + Zoom webhook bridge, all via Docker Compose. No Astro/vendor dependency.
+- **Laptop**: Airflow 3 via Docker Compose + a native macOS Zoom monitor script. No Astro/vendor dependency.
 - **Pi Zero 2 W**: Edge Worker only (full `apache-airflow` pip install required, but no server components). Connects to laptop via Tailscale.
-- **Messaging**: Redpanda (single-container Kafka-compatible broker). Chosen over Apache Kafka for simplicity — one container, no ZooKeeper, ~150MB RAM, starts in seconds. Airflow's Kafka provider works unchanged.
-- **LED display**: A persistent service on the Pi reads state from a file and drives the panel. Airflow tasks write to the state file and exit — they do NOT hold GPIO or run persistently. This avoids Airflow task timeouts and GPIO conflicts.
+- **Zoom detection**: `scripts/zoom_monitor.py` runs natively on macOS, polls for `CptHost` process (Zoom's meeting process), writes `/tmp/zoom-status.json`. Docker bind-mounts this file into Airflow containers.
+- **LED display**: A persistent service (`scripts/led_display.py`) on the Pi reads `/tmp/led-state.json` and drives the panel. Airflow tasks write to the state file and exit — they do NOT hold GPIO or run persistently. This avoids Airflow task timeouts and GPIO conflicts.
 - See `docs/architecture.md` for full system diagram and data flow.
 
 ### Rejected Approaches
 
 - **Astro CLI / Astronomer**: Rejected — demo must be fully open source, no vendor dependency.
-- **Apache Kafka (full)**: Rejected — requires 2-3 containers (broker + ZooKeeper/KRaft), ~1GB+ RAM, 30s startup. Overkill for a laptop demo.
-- **Webhook workaround instead of Kafka**: Rejected — the whole point is demoing real Airflow 3 Asset event-driven scheduling, not faking it.
+- **Kafka/Redpanda + Asset events**: Rejected — added infrastructure complexity (extra container, Kafka connection, AssetWatcher) without matching the talk's message. The talk is about Edge Executor and physical-world orchestration, not event-driven scheduling.
+- **Zoom API polling**: Rejected — rate limits, OAuth scopes, internet dependency. macOS process detection (`CptHost`) is simpler, works offline, and detects the same thing.
+- **Zoom webhooks**: Rejected — requires Zoom app registration, ngrok tunnel, internet. Too many moving parts for a live demo on conference WiFi.
 - **Airflow task as LED process**: Rejected — `rpi-rgb-led-matrix` holds GPIO while running. If the Airflow task IS the LED process, it never exits and gets killed on timeout. Use a state-file pattern instead.
 - **SSH-based task execution from Airflow**: Fallback only if Edge Worker can't run on the Pi. Less impressive for the demo.
 - **Lightweight/standalone edge worker**: Does not exist. The edge worker imports deeply from airflow-core (config, JWT auth, task SDK supervisor). AIP-69 acknowledges "thin deployment" as a future goal, not current reality. Full `apache-airflow` pip install is required.
@@ -75,24 +74,23 @@ The `secret_key` config moved from `[webserver]` to `[api]` in Airflow 3. Use `A
 
 ## Key Airflow 3 Patterns
 
-- **Event-driven DAG**: `Asset` + `AssetWatcher` + `KafkaMessageQueueTrigger` (not cron, not sensor polling)
+- **Continuous scheduling**: DAG runs in a loop, always monitoring Zoom status
+- **Multi-executor in one DAG**: Sensor task on `LocalExecutor` (laptop), LED task on `EdgeExecutor` (Pi)
 - **Edge task routing**: `@task(executor="edge3", queue="raspberry_pi")`
-- **Multi-executor**: `LocalExecutor,edge3:airflow.providers.edge3.executors.EdgeExecutor` (alias required — see `docs/gotchas.md`)
+- **Multi-executor config**: `LocalExecutor,edge3:airflow.providers.edge3.executors.EdgeExecutor` (alias required — see `docs/gotchas.md`)
 - **EdgeDBManager required**: Set `AIRFLOW__DATABASE__EXTERNAL_DB_MANAGERS=airflow.providers.edge3.models.db.EdgeDBManager` or edge DB tables won't be created
-- See `docs/edge-executor.md` and `docs/messaging-layer.md` for details.
+- See `docs/edge-executor.md` for details.
 
 ## Important Constraints
 
-- All polling intervals (Kafka trigger, edge worker job poll, scheduler) should be tuned low for demo responsiveness — target <10s end-to-end latency.
-- Edge worker on Pi needs a systemd service for auto-restart on crash/reboot.
-- The `kafka_default` connection must be set up via environment variable or init script, not manual UI clicks.
+- All polling intervals (zoom monitor, sensor, edge worker job poll, scheduler) should be tuned low for demo responsiveness — target <10s end-to-end latency.
+- Edge worker on Pi needs a systemd service for auto-restart on crash/reboot (deferred to hardening phase).
 - Docker images must be pre-cached before the conference (no WiFi dependency).
 - Scheduler health check must be explicitly enabled: `AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK=true` (disabled by default in Airflow 3).
 
 ## Docs
 
 - `docs/architecture.md` — Full system architecture and data flow
-- `docs/messaging-layer.md` — Redpanda (Kafka) setup and Airflow integration pattern
 - `docs/edge-executor.md` — Edge Executor/Worker setup, configuration, Pi considerations
 - `docs/hardware.md` — Pi, LED panel, SSH, required flags
 - `docs/gotchas.md` — Non-obvious issues that cost debugging time (read every session)
