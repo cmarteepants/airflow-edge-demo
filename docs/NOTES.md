@@ -369,4 +369,11 @@ Everything works end-to-end. The demo flow is:
 4. Join Zoom → ON AIR. Leave → FREE. Automatic continuous looping.
 5. `./demo sim reset` to return to idle if needed.
 
-Tested: 3 full end-to-end cycles (1 sim, 2 real Zoom), failure recovery (systemd restart, Docker restart, zoom monitor restart), all passing.
+Tested: 4 full end-to-end cycles (2 sim, 2 real Zoom), failure recovery (systemd restart, Docker restart, zoom monitor restart), all passing.
+
+### Further polish this session
+
+- **Consolidated config into `.env`**: removed `demo-config.sh`, all scripts source `.env` for `AIRFLOW_URL`, `AIRFLOW_USER`, `AIRFLOW_PASS`, `PI_HOST`
+- **README updated** with `./demo` CLI commands throughout
+- **Verified idle→ON AIR→FREE→idle cycle** with sim commands
+- **Repo is clean for public release**: no secrets in tracked files, `.env` is gitignored

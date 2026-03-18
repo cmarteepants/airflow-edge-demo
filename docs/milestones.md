@@ -42,7 +42,7 @@ PyCascades presentation: March 21, 2026.
 
 ## Hardening & Demo Prep
 
-- [ ] **M4.1** Test full pipeline 3+ times end-to-end
+- [x] **M4.1** Test full pipeline 3+ times end-to-end (4 cycles: 2 sim, 2 real Zoom)
 - [x] **M4.2** Test failure recovery: kill edge worker (systemd restarts), restart Docker Compose (pipeline resumes), kill zoom monitor (start-demo.sh recovers)
 - [x] **M4.3** Pre-cache all Docker images (no conference WiFi dependency)
 - [x] **M4.4** Document startup sequence (`docs/startup.md`)

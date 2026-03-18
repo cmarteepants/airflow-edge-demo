@@ -3,7 +3,7 @@
 # Usage: ./scripts/zoom-sim.sh start | end | status | reset
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/demo-config.sh"
+set -a; source "$SCRIPT_DIR/../.env"; set +a
 FLAG="$SCRIPT_DIR/../zoom-state/active"
 
 case "$1" in
