@@ -262,3 +262,45 @@ M1.10 (systemd) and M1.13 (DAG sync automation) can wait until hardening phase.
 2. Test with a real Zoom call: join → LED ON AIR, leave → LED FREE
 3. M4.4 — Document startup sequence (what to launch and in what order at the venue)
 4. M4.9/M4.10 — passwordless sudo + systemd services on Pi (prevents needing SSH at the venue)
+
+---
+
+## Session 6 — March 18, 2026
+
+### What's working
+
+- **Real Zoom test passed**: join Zoom → ON AIR on panel, leave → FREE. Full DAG cycle completed successfully.
+- **Systemd services on Pi**: `edge-worker` and `led-display` both enabled and active. Auto-start on boot, auto-restart on failure. No more nohup.
+- **`scripts/start-demo.sh`**: Single command starts Docker Compose, waits for health, launches zoom monitor, unpauses DAG.
+- **`scripts/preflight.sh`**: 12 checks covering Docker services, zoom monitor, Pi connectivity, systemd services, edge worker registration, DAG state, bind mounts. All passing.
+- **`docs/startup.md`**: Full venue startup sequence with troubleshooting table.
+- **Passwordless sudo** was already configured on Pi (M4.9 done in a prior session).
+
+### Issues found and fixed
+
+- **Zoom monitor process got stuck**: The long-running `zoom_monitor.py` process (started hours earlier) stopped detecting state changes. CptHost was running but no flag file was created. Killing and restarting the monitor fixed it immediately. Root cause unclear — possibly a `pgrep` subprocess hang. Worth monitoring at the venue.
+- **`pgrep -f "airflow edge worker"` doesn't match systemd process**: The systemd-managed process shows as `/home/constance/airflow-edge-venv/bin/python3 ... airflow edge worker`. Switched preflight check to use `systemctl is-active` instead.
+- **Edge3 provider has no public REST API for listing workers**: `/api/v2/edge/workers` returns 404. Changed preflight to check edge worker connection via journalctl logs instead.
+
+### What's not done
+
+- M2.9 — polling interval tuning (current latency is acceptable but not measured precisely)
+- M3.3 — LED brightness tuning for stage
+- M4.1 — Test full pipeline 3+ times (did it once with real Zoom, once earlier with sim)
+- M4.2 — Failure recovery testing
+- M4.3 — Pre-cache Docker images
+- M4.7 — README.md
+- M4.8 — Pack hardware
+
+### Open questions
+
+- [ ] LED brightness tuning for stage lighting
+- [ ] Zoom monitor process stability — may need a watchdog or periodic restart
+
+### Next session: start here
+
+**Remaining hardening before March 21.** Priority:
+1. M4.1 — Run the full pipeline 3+ times (real Zoom or sim) to build confidence
+2. M4.2 — Failure recovery: restart edge worker, restart Docker, kill Tailscale
+3. M4.3 — `docker compose pull` to pre-cache images
+4. M4.7 — README.md for the public repo (can be quick)

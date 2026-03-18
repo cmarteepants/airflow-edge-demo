@@ -55,7 +55,7 @@ Port 8081 because OrbStack uses 8080 on this machine. The internal container por
 
 ### Pi Edge Worker
 
-Airflow is installed in `~/airflow-edge-venv` on the Pi. Source `~/pi-edge-env.sh` to set all required env vars (executor, API URL, JWT secret, DAGs folder), then start with `airflow edge worker -q raspberry_pi -c 1`. The env file is deployed from `scripts/pi-edge-env.sh` in this repo.
+Airflow is installed in `~/airflow-edge-venv` on the Pi. Both the edge worker and LED display run as systemd services — see `scripts/systemd/` for unit files and install instructions. Manual start is no longer needed.
 
 The edge worker needs the same multi-executor alias config as the server (`LocalExecutor,edge3:airflow.providers.edge3.executors.EdgeExecutor`) because it validates executor names locally when loading DAGs for task execution.
 
@@ -90,7 +90,7 @@ The `secret_key` config moved from `[webserver]` to `[api]` in Airflow 3. Use `A
 ## Important Constraints
 
 - All polling intervals (zoom monitor, sensor, edge worker job poll, scheduler) should be tuned low for demo responsiveness — target <10s end-to-end latency.
-- Edge worker on Pi needs a systemd service for auto-restart on crash/reboot (deferred to hardening phase).
+- Edge worker and LED display on Pi run as systemd services (`edge-worker`, `led-display`) — auto-restart on crash, auto-start on boot. Unit files in `scripts/systemd/`.
 - Docker images must be pre-cached before the conference (no WiFi dependency).
 - Scheduler health check must be explicitly enabled: `AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK=true` (disabled by default in Airflow 3).
 
@@ -100,6 +100,7 @@ The `secret_key` config moved from `[webserver]` to `[api]` in Airflow 3. Use `A
 - `docs/edge-executor.md` — Edge Executor/Worker setup, configuration, Pi considerations
 - `docs/hardware.md` — Pi, LED panel, SSH, required flags
 - `docs/gotchas.md` — Non-obvious issues that cost debugging time (read every session)
+- `docs/startup.md` — Demo startup sequence and troubleshooting for the venue
 - `docs/milestones.md` — Build checklist
 - `NOTES.md` — Running session log: current state, open questions, next steps
 
