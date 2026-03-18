@@ -1,0 +1,33 @@
+#!/bin/bash
+set -euo pipefail
+
+# PyCascades 2026 demo CLI
+# Usage: ./demo <command> [args]
+
+SCRIPTS="$(cd "$(dirname "$0")/scripts" && pwd)"
+
+case "${1:-}" in
+  start)
+    exec "$SCRIPTS/start-demo.sh"
+    ;;
+  preflight)
+    exec "$SCRIPTS/preflight.sh"
+    ;;
+  sim)
+    shift
+    exec "$SCRIPTS/zoom-sim.sh" "$@"
+    ;;
+  sync)
+    exec "$SCRIPTS/sync-dags.sh"
+    ;;
+  *)
+    echo "Usage: ./demo <command>"
+    echo ""
+    echo "Commands:"
+    echo "  start       Start Docker Compose, zoom monitor, unpause DAG"
+    echo "  preflight   Verify all components are healthy"
+    echo "  sim         Simulate Zoom (start | end | status | reset)"
+    echo "  sync        Sync DAGs to the Pi via rsync"
+    exit 1
+    ;;
+esac

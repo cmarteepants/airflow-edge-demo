@@ -102,11 +102,11 @@ The `secret_key` config moved from `[webserver]` to `[api]` in Airflow 3. Use `A
 - `docs/gotchas.md` — Non-obvious issues that cost debugging time (read every session)
 - `docs/startup.md` — Demo startup sequence and troubleshooting for the venue
 - `docs/milestones.md` — Build checklist
-- `NOTES.md` — Running session log: current state, open questions, next steps
+- `docs/NOTES.md` — Running session log: current state, open questions, next steps
 
 ## Start of Session Protocol
 
-At the start of each session, before doing anything else, read `docs/gotchas.md`, `docs/milestones.md`, and the most recent entry in `NOTES.md` and summarize:
+At the start of each session, before doing anything else, read `docs/gotchas.md`, `docs/milestones.md`, and the most recent entry in `docs/NOTES.md` and summarize:
 
 - Current state
 - Open questions
@@ -117,11 +117,11 @@ At the start of each session, before doing anything else, read `docs/gotchas.md`
 At the end of each session, do the following without being asked:
 
 1. Update `CLAUDE.md` with any new architecture decisions, rejected approaches and why, hardware details, or project conventions discovered this session. Remove anything that's now outdated.
-2. Update `NOTES.md` with:
+2. Update `docs/NOTES.md` with:
     - Current state (what's working, what's broken)
     - Open questions needing a decision
     - The single most important thing to do at the start of next session
 
 3. Update `docs/milestones.md`: check off completed milestones, add new ones if needed, remove irrelevant ones.
 
-Keep `CLAUDE.md` authoritative and stable. Keep `NOTES.md` as a running log. Append, don't overwite.
+Keep `CLAUDE.md` authoritative and stable. Keep `docs/NOTES.md` as a running log. Append, don't overwite.
