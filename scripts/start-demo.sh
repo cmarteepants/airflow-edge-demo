@@ -15,6 +15,7 @@ fail() { echo -e "  ${RED}✘${RESET} $1"; }
 info() { echo -e "  ${YELLOW}…${RESET} $1"; }
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+source "$REPO_ROOT/scripts/demo-config.sh"
 cd "$REPO_ROOT"
 
 echo -e "\n${BOLD}Starting PyCascades demo${RESET}\n"
@@ -70,9 +71,9 @@ fi
 info "Unpausing led_sign DAG..."
 
 # Get JWT token
-TOKEN_RESPONSE=$(curl -s -X POST http://localhost:8081/auth/token \
+TOKEN_RESPONSE=$(curl -s -X POST "${AIRFLOW_URL}/auth/token" \
     -H 'Content-Type: application/json' \
-    -d '{"username":"admin","password":"admin"}')
+    -d "{\"username\":\"${AIRFLOW_USER}\",\"password\":\"${AIRFLOW_PASS}\"}")
 
 TOKEN=$(echo "$TOKEN_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])" 2>/dev/null || true)
 
@@ -83,7 +84,7 @@ if [[ -z "$TOKEN" ]]; then
 fi
 
 UNPAUSE_RESPONSE=$(curl -s -o /dev/null -w '%{http_code}' -X PATCH \
-    http://localhost:8081/api/v2/dags/led_sign \
+    "${AIRFLOW_URL}/api/v2/dags/led_sign" \
     -H 'Content-Type: application/json' \
     -H "Authorization: Bearer $TOKEN" \
     -d '{"is_paused": false}')
@@ -96,8 +97,8 @@ fi
 
 # --- 5. Status summary ---
 echo -e "\n${BOLD}Demo ready${RESET}\n"
-echo -e "  Airflow UI:     ${GREEN}http://localhost:8081${RESET}  (admin / admin)"
+echo -e "  Airflow UI:     ${GREEN}${AIRFLOW_URL}${RESET}  (${AIRFLOW_USER} / ${AIRFLOW_PASS})"
 echo -e "  Zoom monitor:   running natively (log: /tmp/zoom_monitor.log)"
-echo -e "  Simulate Zoom:  ${BOLD}./scripts/zoom-sim.sh start${RESET}  /  ${BOLD}end${RESET}  /  ${BOLD}status${RESET}"
+echo -e "  Simulate Zoom:  ${BOLD}./demo sim start${RESET}  /  ${BOLD}end${RESET}  /  ${BOLD}reset${RESET}"
 echo -e "  Pi edge worker:  managed separately via systemd"
 echo ""

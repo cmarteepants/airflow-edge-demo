@@ -4,7 +4,8 @@ set -euo pipefail
 # Pre-demo preflight check for PyCascades 2026 LED sign demo.
 # Verifies all components are running and reports pass/fail for each.
 
-AIRFLOW_URL="http://localhost:8081"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/demo-config.sh"
 PASS=0
 FAIL=0
 
@@ -50,9 +51,9 @@ echo ""
 
 # --- 3. Pi reachable ---
 echo "Raspberry Pi:"
-check "Pi reachable (ssh airflow-demo)" ssh -o ConnectTimeout=5 airflow-demo true
-check "Edge worker on Pi" ssh -o ConnectTimeout=5 airflow-demo systemctl is-active edge-worker
-check "LED display on Pi" ssh -o ConnectTimeout=5 airflow-demo systemctl is-active led-display
+check "Pi reachable (ssh ${PI_HOST})" ssh -o ConnectTimeout=5 "$PI_HOST" true
+check "Edge worker on Pi" ssh -o ConnectTimeout=5 "$PI_HOST" systemctl is-active edge-worker
+check "LED display on Pi" ssh -o ConnectTimeout=5 "$PI_HOST" systemctl is-active led-display
 echo ""
 
 # --- 4. Airflow API checks ---
@@ -61,11 +62,11 @@ echo "Airflow API:"
 # Get JWT token
 TOKEN=$(curl -s -X POST "${AIRFLOW_URL}/auth/token" \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin"}' 2>/dev/null \
+  -d "{\"username\":\"${AIRFLOW_USER}\",\"password\":\"${AIRFLOW_PASS}\"}" 2>/dev/null \
   | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null || true)
 
 # Edge worker connected (check for active polling or startup message in recent logs)
-if ssh -o ConnectTimeout=5 airflow-demo 'journalctl -u edge-worker --no-pager -n 50 2>/dev/null | grep -qE "(No new job to process|Starting worker with API endpoint)"' 2>/dev/null; then
+if ssh -o ConnectTimeout=5 "$PI_HOST" 'journalctl -u edge-worker --no-pager -n 50 2>/dev/null | grep -qE "(No new job to process|Starting worker with API endpoint)"' 2>/dev/null; then
   pass "Edge worker connected to API"
 else
   fail "Edge worker connected to API (no activity in recent logs)"

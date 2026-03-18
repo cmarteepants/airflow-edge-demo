@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: ./scripts/sync-dags.sh
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PI_HOST="airflow-demo"
+source "$REPO_ROOT/scripts/demo-config.sh"
 PI_DAGS="~/airflow-edge-demo/dags/"
 
 echo "Syncing dags/ → ${PI_HOST}:${PI_DAGS}"

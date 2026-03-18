@@ -2,7 +2,9 @@
 # Simulate Zoom meeting start/end for DAG testing.
 # Usage: ./scripts/zoom-sim.sh start | end | status | reset
 
-FLAG="$(dirname "$0")/../zoom-state/active"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/demo-config.sh"
+FLAG="$SCRIPT_DIR/../zoom-state/active"
 
 case "$1" in
   start)
@@ -21,7 +23,7 @@ case "$1" in
     fi
     ;;
   reset)
-    ssh airflow-demo 'rm -f /tmp/led-state.json'
+    ssh "$PI_HOST" 'rm -f /tmp/led-state.json'
     echo "LED panel reset to idle (state file deleted on Pi)"
     ;;
   *)
