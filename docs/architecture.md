@@ -67,13 +67,15 @@ A busy/on-air sign on an RGB LED matrix panel, orchestrated by Apache Airflow 3 
 | `airflow-scheduler` | Schedules DAGs, queues edge tasks |
 | `airflow-dag-processor` | Parses DAG files |
 | `airflow-triggerer` | Runs KafkaMessageQueueTrigger |
-| `airflow-init` | DB migration + admin user |
+| `airflow-init` | DB migration (runs once, then exits) |
 | `redpanda` | Kafka-compatible message broker |
-| `zoom-bridge` | Webhook receiver → Kafka producer |
+
+## Demo Trigger
+
+Events are produced to Redpanda via `scripts/produce_event.py` or Redpanda's REST proxy (port 8082). Live Zoom webhook integration is a stretch goal — see `docs/milestones.md`.
 
 ## Networking
 
-- **Tailscale** handles laptop ↔ Pi connectivity (no conference WiFi dependency for this link)
-- Docker Compose exposes port 8080 on the laptop host
-- Pi's Edge Worker connects to `http://<laptop-tailscale-ip>:8080/edge_worker/v1/rpcapi`
-- Zoom webhook needs a public URL — use **ngrok** to tunnel to the zoom-bridge container
+- **Tailscale** (or any network where the Pi can reach the laptop) handles laptop ↔ Pi connectivity
+- Docker Compose exposes Airflow API on port 8081 on the laptop host
+- Pi's Edge Worker connects to `http://<host-ip>:8081/edge_worker/v1/rpcapi`

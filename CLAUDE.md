@@ -8,6 +8,18 @@ PyCascades 2026 demo (presenting March 21): a busy/on-air sign on an RGB LED mat
 
 Flow: Zoom status change → Kafka topic (Redpanda) → Airflow Asset event → Edge Worker on Raspberry Pi → LED panel update.
 
+## Pinned Versions
+
+| Package | Version |
+|---|---|
+| `apache-airflow` | 3.1.8 |
+| `apache-airflow-providers-edge3` | 3.2.0 (overrides constraint; needed for worker concurrency control) |
+| `apache-airflow-providers-apache-kafka` | 1.13.0 |
+| `apache/airflow` Docker image | `3.1.8` |
+| `redpandadata/redpanda` Docker image | `v25.3.10` |
+
+Edge3 3.2.0 is not in the Airflow 3.1.8 constraints file (which pins 3.1.0), but its PyPI metadata declares `>=3.0.0` compatibility. Install with constraints first, then upgrade edge3 separately.
+
 ## Architecture
 
 - **Laptop**: Airflow 3 + Redpanda + Zoom webhook bridge, all via Docker Compose. No Astro/vendor dependency.
@@ -23,6 +35,30 @@ Flow: Zoom status change → Kafka topic (Redpanda) → Airflow Asset event → 
 - **Webhook workaround instead of Kafka**: Rejected — the whole point is demoing real Airflow 3 Asset event-driven scheduling, not faking it.
 - **Airflow task as LED process**: Rejected — `rpi-rgb-led-matrix` holds GPIO while running. If the Airflow task IS the LED process, it never exits and gets killed on timeout. Use a state-file pattern instead.
 - **SSH-based task execution from Airflow**: Fallback only if Edge Worker can't run on the Pi. Less impressive for the demo.
+- **Lightweight/standalone edge worker**: Does not exist. The edge worker imports deeply from airflow-core (config, JWT auth, task SDK supervisor). AIP-69 acknowledges "thin deployment" as a future goal, not current reality. Full `apache-airflow` pip install is required.
+
+## Running the Stack
+
+### Laptop (Docker Compose)
+
+```bash
+cp .env.example .env  # then edit JWT secret
+docker compose build
+docker compose up -d
+# UI at http://localhost:8081 — login: admin / admin
+```
+
+Port 8081 because OrbStack uses 8080 on this machine. The internal container port is still 8080.
+
+### Pi Edge Worker
+
+Airflow is installed in `~/airflow-edge-venv` on the Pi. The `airflow edge` CLI command requires `AIRFLOW__CORE__EXECUTOR=airflow.providers.edge3.executors.EdgeExecutor` to be set, or it won't appear in `airflow --help`.
+
+## Airflow 3 Auth
+
+Airflow 3 uses `SimpleAuthManager` — no `airflow users create` command. Users and roles are defined via `AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS` (format: `username:role`). Passwords are stored in a JSON file pointed to by `AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE`. The file format is `{"username": "password"}`. Our passwords file is at `config/simple_auth_passwords.json`.
+
+The `secret_key` config moved from `[webserver]` to `[api]` in Airflow 3. Use `AIRFLOW__API__SECRET_KEY`, not `AIRFLOW__WEBSERVER__SECRET_KEY`.
 
 ## Hardware
 
@@ -39,7 +75,7 @@ Flow: Zoom status change → Kafka topic (Redpanda) → Airflow Asset event → 
 - **Event-driven DAG**: `Asset` + `AssetWatcher` + `KafkaMessageQueueTrigger` (not cron, not sensor polling)
 - **Edge task routing**: `@task(executor="edge3", queue="raspberry_pi")`
 - **Multi-executor**: `LocalExecutor,airflow.providers.edge3.executors.EdgeExecutor`
-- **Version pinning is critical**: Edge Worker auto-shuts-down on version mismatch with server. Pin exact versions of `airflow`, `edge3`, and `kafka` provider in both Dockerfile and Pi.
+- **EdgeDBManager required**: Set `AIRFLOW__DATABASE__EXTERNAL_DB_MANAGERS=airflow.providers.edge3.models.db.EdgeDBManager` or edge DB tables won't be created
 - See `docs/edge-executor.md` and `docs/messaging-layer.md` for details.
 
 ## Important Constraints
@@ -71,5 +107,6 @@ At the end of each session, do the following without being asked:
   - Current state (what's working, what's broken)
   - Open questions needing a decision
   - The single most important thing to do at the start of next session
+3. Update `docs/milestones.md`: check off completed milestones, add new ones if needed, remove irrelevant ones.
 
-  Keep `CLAUDE.md` authoritative and stable. Keep `NOTES.md` as a running log. Append, don't overwite. 
+  Keep `CLAUDE.md` authoritative and stable. Keep `NOTES.md` as a running log. Append, don't overwite.
