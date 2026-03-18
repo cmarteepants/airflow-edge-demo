@@ -11,7 +11,7 @@ Flow: Zoom meeting detected via macOS process inspection → Airflow sensor dete
 ## Pinned Versions
 
 | Package | Version |
-|---|---|
+| --- | --- |
 | `apache-airflow` | 3.1.8 |
 | `apache-airflow-providers-edge3` | 3.2.0 (overrides constraint; needed for worker concurrency control) |
 | `apache/airflow` Docker image | `3.1.8` |
@@ -98,18 +98,23 @@ The `secret_key` config moved from `[webserver]` to `[api]` in Airflow 3. Use `A
 - `NOTES.md` — Running session log: current state, open questions, next steps
 
 ## Start of Session Protocol
+
 At the start of each session, before doing anything else, read `docs/gotchas.md`, `docs/milestones.md`, and the most recent entry in `NOTES.md` and summarize:
+
 - Current state
 - Open questions
 - What we're doing this session
 
 ## End of Session Protocol
+
 At the end of each session, do the following without being asked:
+
 1. Update `CLAUDE.md` with any new architecture decisions, rejected approaches and why, hardware details, or project conventions discovered this session. Remove anything that's now outdated.
 2. Update `NOTES.md` with:
-  - Current state (what's working, what's broken)
-  - Open questions needing a decision
-  - The single most important thing to do at the start of next session
+    - Current state (what's working, what's broken)
+    - Open questions needing a decision
+    - The single most important thing to do at the start of next session
+
 3. Update `docs/milestones.md`: check off completed milestones, add new ones if needed, remove irrelevant ones.
 
-  Keep `CLAUDE.md` authoritative and stable. Keep `NOTES.md` as a running log. Append, don't overwite.
+Keep `CLAUDE.md` authoritative and stable. Keep `NOTES.md` as a running log. Append, don't overwite.
