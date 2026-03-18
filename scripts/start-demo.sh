@@ -29,14 +29,18 @@ info "Waiting for services to become healthy (up to 60s)..."
 TIMEOUT=60
 ELAPSED=0
 while true; do
-    PS_OUTPUT=$(docker compose ps --format json 2>/dev/null || true)
+    # Count services that are both in our target list and healthy
+    HEALTHY_COUNT=$(docker compose ps --format json 2>/dev/null \
+        | python3 -c "
+import sys, json
+targets = {'postgres', 'airflow-apiserver', 'airflow-scheduler'}
+count = sum(1 for line in sys.stdin if line.strip()
+            and json.loads(line).get('Service') in targets
+            and json.loads(line).get('Health') == 'healthy')
+print(count)
+" 2>/dev/null || echo "0")
 
-    # Check each service's health status from the JSON output
-    POSTGRES_HEALTHY=$(echo "$PS_OUTPUT" | grep -c '"postgres".*"healthy"' || true)
-    APISERVER_HEALTHY=$(echo "$PS_OUTPUT" | grep -c '"airflow-apiserver".*"healthy"' || true)
-    SCHEDULER_HEALTHY=$(echo "$PS_OUTPUT" | grep -c '"airflow-scheduler".*"healthy"' || true)
-
-    if [[ "$POSTGRES_HEALTHY" -ge 1 && "$APISERVER_HEALTHY" -ge 1 && "$SCHEDULER_HEALTHY" -ge 1 ]]; then
+    if [[ "$HEALTHY_COUNT" -ge 3 ]]; then
         break
     fi
 

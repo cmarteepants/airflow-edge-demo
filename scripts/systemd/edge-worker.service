@@ -8,7 +8,7 @@ Type=exec
 User=constance
 Environment=PATH=/home/constance/airflow-edge-venv/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/bin/bash -c 'source /home/constance/pi-edge-env.sh && exec airflow edge worker -q raspberry_pi -c 1'
-Restart=on-failure
+Restart=always
 RestartSec=5
 
 [Install]

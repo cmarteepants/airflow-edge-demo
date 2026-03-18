@@ -64,11 +64,11 @@ TOKEN=$(curl -s -X POST "${AIRFLOW_URL}/auth/token" \
   -d '{"username":"admin","password":"admin"}' 2>/dev/null \
   | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null || true)
 
-# Edge worker connected (check recent logs for API endpoint connection)
-if ssh -o ConnectTimeout=5 airflow-demo 'journalctl -u edge-worker --no-pager -n 50 2>/dev/null | grep -q "Starting worker with API endpoint"' 2>/dev/null; then
+# Edge worker connected (check for active polling or startup message in recent logs)
+if ssh -o ConnectTimeout=5 airflow-demo 'journalctl -u edge-worker --no-pager -n 50 2>/dev/null | grep -qE "(No new job to process|Starting worker with API endpoint)"' 2>/dev/null; then
   pass "Edge worker connected to API"
 else
-  fail "Edge worker connected to API (no connection in recent logs)"
+  fail "Edge worker connected to API (no activity in recent logs)"
 fi
 
 if [ -z "$TOKEN" ]; then
