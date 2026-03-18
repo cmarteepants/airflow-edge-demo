@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=exec
 ExecStart=/usr/bin/python3 /home/constance/airflow-edge-demo/scripts/led_display.py
-Restart=on-failure
+Restart=always
 RestartSec=3
 
 [Install]
