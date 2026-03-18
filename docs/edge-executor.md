@@ -55,14 +55,18 @@ pip install apache-airflow-providers-edge3==3.2.0
 
 ### Configure (environment variables)
 
+Use `scripts/pi-edge-env.sh` — source it before starting the worker. Key variables:
+
 ```bash
 export AIRFLOW__CORE__EXECUTOR=airflow.providers.edge3.executors.EdgeExecutor
-export AIRFLOW__CORE__EXECUTION_API_SERVER_URL=http://<LAPTOP_TAILSCALE_IP>:8080/execution/
-export AIRFLOW__EDGE__API_URL=http://<LAPTOP_TAILSCALE_IP>:8080/edge_worker/v1/rpcapi
+export AIRFLOW__CORE__EXECUTION_API_SERVER_URL=http://<LAPTOP_IP>:8081/execution/
+export AIRFLOW__EDGE__API_URL=http://<LAPTOP_IP>:8081/edge_worker/v1/rpcapi
 export AIRFLOW__EDGE__WORKER_CONCURRENCY=1
-export AIRFLOW__API_AUTH__JWT_SECRET=<SAME_SECRET_AS_CENTRAL_SERVER>
+export AIRFLOW__API_AUTH__JWT_SECRET=<SAME_AS_AIRFLOW_JWT_SECRET_IN_.env>
 export AIRFLOW__CORE__DAGS_FOLDER=/home/constance/airflow-edge-demo/dags
 ```
+
+**Important**: The `.env` file uses `AIRFLOW_JWT_SECRET` (no double underscores). Docker Compose maps this to `AIRFLOW__API_AUTH__JWT_SECRET`. On the Pi, you must set `AIRFLOW__API_AUTH__JWT_SECRET` directly — same value, different env var name.
 
 ### Start
 

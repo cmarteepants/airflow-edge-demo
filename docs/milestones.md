@@ -11,12 +11,12 @@ PyCascades presentation: March 21, 2026.
 - [x] **M1.5** Pin exact versions — Airflow 3.1.8, edge3 3.2.0, kafka 1.13.0 — matching in both Dockerfile and Pi
 - [x] **M1.6** SSH to Pi, install Airflow 3.1.8 + edge3 3.2.0 provider in venv at `~/airflow-edge-venv`
 - [x] **M1.7** Create `.env.example` with all configurable values (JWT secret, host IP, UID) and add `.env` to `.gitignore`
-- [ ] **M1.8** Configure edge worker env vars on Pi (executor, API URL, JWT secret, DAGs folder)
+- [x] **M1.8** Configure edge worker env vars on Pi (executor, API URL, JWT secret, DAGs folder) — `scripts/pi-edge-env.sh` deployed to `~/pi-edge-env.sh`
 - [ ] **M1.9** Configure passwordless `sudo` on Pi for the LED script/binary (`visudo` NOPASSWD rule for `constance`)
 - [ ] **M1.10** Create systemd service for the edge worker on Pi — auto-restart on crash or reboot
-- [ ] **M1.11** Start edge worker on Pi, confirm it appears in Airflow UI under Admin → Edge Workers
-- [ ] **M1.12** Write a hello-world DAG with `@task(executor="edge3", queue="raspberry_pi")` that prints hostname — trigger it manually and confirm it runs on the Pi, not locally
-- [ ] **M1.13** Script or document DAG sync mechanism to Pi (rsync, git clone, or symlink)
+- [x] **M1.11** Start edge worker on Pi, confirm it appears in Airflow UI under Admin → Edge Workers — verified via API logs (478+ fetch calls, heartbeats)
+- [x] **M1.12** Write a hello-world DAG with `@task(executor="edge3", queue="raspberry_pi")` that prints hostname — `dags/hello_edge.py`, ran successfully on Pi (`hostname: airflow-demo`, 0.58s)
+- [ ] **M1.13** Script or document DAG sync mechanism to Pi (rsync, git clone, or symlink) — rsync working manually, not yet automated
 
 ## DAGs, LED Scripts & Kafka Integration
 
