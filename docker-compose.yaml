@@ -21,6 +21,7 @@ x-airflow-common: &airflow-common
     - ./dags:/opt/airflow/dags
     - ./config:/opt/airflow/config
     - ./logs:/opt/airflow/logs
+    - ./zoom-state:/tmp/zoom-state:ro
   depends_on:
     postgres:
       condition: service_healthy
