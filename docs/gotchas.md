@@ -56,3 +56,19 @@ Set `AIRFLOW__DATABASE__EXTERNAL_DB_MANAGERS=airflow.providers.edge3.models.db.E
 The constraints file for 3.1.8 pins edge3 to 3.1.0. To get 3.2.0:
 1. Install with constraints (gets all base deps at compatible versions)
 2. Then `pip install apache-airflow-providers-edge3==3.2.0` to upgrade edge3 specifically
+
+### `rpi-rgb-led-matrix` Python bindings won't build with pip on Pi Zero 2 W
+Post-Feb 2026, the repo switched from a Makefile to scikit-build-core/cmake for the Python bindings. This pulls in cmake + ninja (~30MB) which overflows the Pi's 209MB `/tmp` tmpfs, and the build is extremely slow. Fix: roll back the bindings to the last Makefile-based commit, stub out the Pillow shim (we don't need PIL support), then build with make:
+```bash
+cd ~/rpi-rgb-led-matrix
+git checkout 076c54b -- bindings/python
+# Replace pillow.c with a no-op stub (avoids needing Imaging.h):
+cat > bindings/python/rgbmatrix/shims/pillow.c << 'EOF'
+#include "pillow.h"
+int** get_image32(void* im) { (void)im; return (int**)0; }
+EOF
+cd bindings/python
+make build-python PYTHON=$(which python3)
+sudo make install-python PYTHON=$(which python3)
+```
+This installs into system Python (`/usr/local/lib/python3.13`), not the Airflow venv. The LED display service runs under `sudo python3`, so it uses system Python — separate from the edge worker venv.
