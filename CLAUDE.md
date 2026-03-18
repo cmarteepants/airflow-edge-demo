@@ -52,7 +52,9 @@ Port 8081 because OrbStack uses 8080 on this machine. The internal container por
 
 ### Pi Edge Worker
 
-Airflow is installed in `~/airflow-edge-venv` on the Pi. The `airflow edge` CLI command requires `AIRFLOW__CORE__EXECUTOR=airflow.providers.edge3.executors.EdgeExecutor` to be set, or it won't appear in `airflow --help`.
+Airflow is installed in `~/airflow-edge-venv` on the Pi. Source `~/pi-edge-env.sh` to set all required env vars (executor, API URL, JWT secret, DAGs folder), then start with `airflow edge worker -q raspberry_pi -c 1`. The env file is deployed from `scripts/pi-edge-env.sh` in this repo.
+
+The edge worker needs the same multi-executor alias config as the server (`LocalExecutor,edge3:airflow.providers.edge3.executors.EdgeExecutor`) because it validates executor names locally when loading DAGs for task execution.
 
 ## Airflow 3 Auth
 
@@ -64,6 +66,7 @@ The `secret_key` config moved from `[webserver]` to `[api]` in Airflow 3. Use `A
 
 - **Pi**: Raspberry Pi Zero 2 W (ARM Cortex-A53, 416MB usable RAM + 2.5GB swap configured)
 - **Pi SSH**: `ssh airflow-demo` (user: `constance`, key: `~/.ssh/pycascades_pi`, Tailscale IP: `100.92.1.2`)
+- **Laptop Tailscale IP**: `100.113.75.99` (this is what `EDGE_HOST_IP` in `.env` must be set to)
 - **LED panel**: 64x32 RGB, connected via Adafruit RGB Matrix Bonnet (#3211) + ribbon cable
 - **LED library**: `rpi-rgb-led-matrix` built from source at `~/rpi-rgb-led-matrix` on the Pi
 - **LED panel flags (mandatory for ALL commands)**: `--led-rows=32 --led-cols=64 --led-slowdown-gpio=4 --led-no-hardware-pulse --led-gpio-mapping=adafruit-hat`
@@ -74,7 +77,7 @@ The `secret_key` config moved from `[webserver]` to `[api]` in Airflow 3. Use `A
 
 - **Event-driven DAG**: `Asset` + `AssetWatcher` + `KafkaMessageQueueTrigger` (not cron, not sensor polling)
 - **Edge task routing**: `@task(executor="edge3", queue="raspberry_pi")`
-- **Multi-executor**: `LocalExecutor,airflow.providers.edge3.executors.EdgeExecutor`
+- **Multi-executor**: `LocalExecutor,edge3:airflow.providers.edge3.executors.EdgeExecutor` (alias required — see `docs/gotchas.md`)
 - **EdgeDBManager required**: Set `AIRFLOW__DATABASE__EXTERNAL_DB_MANAGERS=airflow.providers.edge3.models.db.EdgeDBManager` or edge DB tables won't be created
 - See `docs/edge-executor.md` and `docs/messaging-layer.md` for details.
 
@@ -84,6 +87,7 @@ The `secret_key` config moved from `[webserver]` to `[api]` in Airflow 3. Use `A
 - Edge worker on Pi needs a systemd service for auto-restart on crash/reboot.
 - The `kafka_default` connection must be set up via environment variable or init script, not manual UI clicks.
 - Docker images must be pre-cached before the conference (no WiFi dependency).
+- Scheduler health check must be explicitly enabled: `AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK=true` (disabled by default in Airflow 3).
 
 ## Docs
 
@@ -91,11 +95,12 @@ The `secret_key` config moved from `[webserver]` to `[api]` in Airflow 3. Use `A
 - `docs/messaging-layer.md` — Redpanda (Kafka) setup and Airflow integration pattern
 - `docs/edge-executor.md` — Edge Executor/Worker setup, configuration, Pi considerations
 - `docs/hardware.md` — Pi, LED panel, SSH, required flags
+- `docs/gotchas.md` — Non-obvious issues that cost debugging time (read every session)
 - `docs/milestones.md` — Build checklist
 - `NOTES.md` — Running session log: current state, open questions, next steps
 
 ## Start of Session Protocol
-At the start of each session, before doing anything else, read the most recent entry in `NOTES.md` and summarize:
+At the start of each session, before doing anything else, read `docs/gotchas.md`, `docs/milestones.md`, and the most recent entry in `NOTES.md` and summarize:
 - Current state
 - Open questions
 - What we're doing this session

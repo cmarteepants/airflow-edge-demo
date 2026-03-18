@@ -111,3 +111,53 @@ Running session log. Append only — newest entries at the bottom.
 3. Start `airflow edge worker -q raspberry_pi -c 1`
 4. Confirm it appears in Airflow UI → Admin → Edge Workers
 5. Write and trigger a hello-world DAG that runs on the Pi
+
+---
+
+## Session 3 — March 18, 2026
+
+### What's working
+
+- **Edge worker connected and running on Pi** — polling every 2s, heartbeats every 10s, registered as `airflow-demo` in the API server
+- **hello_edge DAG** runs successfully end-to-end: triggered via API → scheduler queues → edge worker picks up → executes on Pi (`hostname: airflow-demo`, `arch: aarch64`) → state=success in ~3.5s
+- **All Docker Compose services healthy** including scheduler (after enabling health check)
+- **Pi env file** (`~/pi-edge-env.sh`) deployed with correct laptop IP, JWT secret, executor config
+- **DAG sync via rsync** working (manual, not automated yet)
+- **`docs/gotchas.md` created** — consolidated all debugging lessons from sessions 1–3
+
+### What's not working / not done
+
+- Edge worker on Pi runs via `nohup` — no systemd service yet (M1.10)
+- No passwordless sudo on Pi (M1.9)
+- No DAG sync automation (M1.13)
+- No LED scripts, no Kafka DAG, no Kafka connection (M2.x)
+- No `scripts/produce_event.py`
+
+### Decisions made this session
+
+1. **`EDGE_HOST_IP` is the laptop's Tailscale IP** (`100.113.75.99`), not the Pi's (`100.92.1.2`) — was set backwards in `.env`
+2. **Multi-executor alias syntax required everywhere** — `edge3:airflow.providers.edge3.executors.EdgeExecutor` needed on both server and Pi, not just the server. The Pi validates executor names during DagBag load at task execution time.
+3. **Scheduler health check disabled by default in Airflow 3** — must set `AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK=true` explicitly
+4. **Airflow 3 API uses JWT tokens** — not basic auth. POST to `/auth/token` with username/password to get a bearer token.
+5. **DAG trigger requires `logical_date: null`** — Airflow 3 API rejects empty `{}` body for manual DAG runs
+
+### Gotchas learned
+
+- See `docs/gotchas.md` — consolidated all gotchas from all sessions into one doc this session
+
+### Open questions
+
+- [ ] LED display design — what font/colors/layout? Block letters? Scrolling? Static centered text?
+- [ ] State file location on Pi — `/tmp/led-state.json` or somewhere more durable?
+- [ ] Does the LED display service need its own systemd unit?
+
+### Next session: start here
+
+**M2 — LED scripts and Kafka DAG**. The infrastructure is proven. Priority is now:
+1. M1.9 — passwordless sudo on Pi (quick, unblocks LED work)
+2. M2.1–M2.3 — LED display service on Pi (state file pattern + persistent display process)
+3. M2.5–M2.7 — Kafka-triggered DAG with Asset + AssetWatcher
+4. M2.9 — `scripts/produce_event.py` to test the pipeline
+5. M2.10 — First manual end-to-end test
+
+M1.10 (systemd) and M1.13 (DAG sync automation) can wait until hardening phase.
