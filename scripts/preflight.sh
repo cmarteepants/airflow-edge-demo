@@ -5,7 +5,7 @@ set -euo pipefail
 # Verifies all components are running and reports pass/fail for each.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/demo-config.sh"
+set -a; source "$SCRIPT_DIR/../.env"; set +a
 PASS=0
 FAIL=0
 

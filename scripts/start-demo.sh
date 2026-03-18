@@ -15,7 +15,7 @@ fail() { echo -e "  ${RED}✘${RESET} $1"; }
 info() { echo -e "  ${YELLOW}…${RESET} $1"; }
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-source "$REPO_ROOT/scripts/demo-config.sh"
+set -a; source "$REPO_ROOT/.env"; set +a
 cd "$REPO_ROOT"
 
 echo -e "\n${BOLD}Starting PyCascades demo${RESET}\n"
