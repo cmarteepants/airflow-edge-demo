@@ -45,6 +45,18 @@ The `.env` file uses `AIRFLOW_JWT_SECRET` (single underscores, no section prefix
 
 ## Configuration
 
+### `mode="reschedule"` is broken in Airflow 3.1.8
+Sensors using `mode="reschedule"` correctly mark themselves `up_for_reschedule` but the scheduler fails to reschedule them, leaving the task in `failed` state. Use `mode="poke"` instead. For this demo (single sensor active at a time) there's no resource cost.
+
+### `@continuous` requires `start_date=datetime(...)`, not a string
+`@dag(schedule="@continuous", start_date="2026-03-01")` throws `AttributeError: 'str' object has no attribute 'utcoffset'` at parse time. Use `start_date=datetime(2026, 3, 1)` with `from datetime import datetime`.
+
+### Never manually trigger `led_sign` while it's running
+With `max_active_runs=1`, a manually triggered run goes to `queued` and blocks `@continuous` from creating the next scheduled run after the active run completes. If you accidentally do this, delete the queued run with `af runs delete led_sign <run_id>`.
+
+### Pi DAGs folder is `~/airflow-edge-demo/dags/`, not `~/dags/`
+The `AIRFLOW__CORE__DAGS_FOLDER` in `~/pi-edge-env.sh` points to `$HOME/airflow-edge-demo/dags`. If you rsync to `~/dags/` instead, the edge worker loads the DAG file but can't find the dag_id in DagBag, logs `Dag not found during start up`, and marks the task `up_for_reschedule`.
+
 ### EdgeDBManager must be explicitly configured or edge tables silently won't exist
 Set `AIRFLOW__DATABASE__EXTERNAL_DB_MANAGERS=airflow.providers.edge3.models.db.EdgeDBManager` on all server components. Without this, `airflow db migrate` won't create edge-specific tables, and edge worker registration/job queueing will fail with confusing database errors. No warning is logged if it's missing.
 

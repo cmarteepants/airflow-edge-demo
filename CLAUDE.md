@@ -22,7 +22,7 @@ Edge3 3.2.0 is not in the Airflow 3.1.8 constraints file (which pins 3.1.0), but
 
 - **Laptop**: Airflow 3 via Docker Compose + a native macOS Zoom monitor script. No Astro/vendor dependency.
 - **Pi Zero 2 W**: Edge Worker only (full `apache-airflow` pip install required, but no server components). Connects to laptop via Tailscale.
-- **Zoom detection**: `scripts/zoom_monitor.py` runs natively on macOS, polls for `CptHost` process (Zoom's meeting process), writes `/tmp/zoom-status.json`. Docker bind-mounts this file into Airflow containers.
+- **Zoom detection**: `scripts/zoom_monitor.py` runs natively on macOS, polls for `CptHost` process (Zoom's meeting process). Creates `zoom-state/active` (repo-relative flag file) when a meeting starts, deletes it when it ends. Docker bind-mounts `./zoom-state:/tmp/zoom-state:ro` into all Airflow containers. Use `scripts/zoom-sim.sh start|end|status` to simulate without Zoom.
 - **LED display**: A persistent service (`scripts/led_display.py`) on the Pi reads `/tmp/led-state.json` and drives the panel. Airflow tasks write to the state file and exit — they do NOT hold GPIO or run persistently. This avoids Airflow task timeouts and GPIO conflicts.
 - See `docs/architecture.md` for full system diagram and data flow.
 
@@ -35,6 +35,10 @@ Edge3 3.2.0 is not in the Airflow 3.1.8 constraints file (which pins 3.1.0), but
 - **Airflow task as LED process**: Rejected — `rpi-rgb-led-matrix` holds GPIO while running. If the Airflow task IS the LED process, it never exits and gets killed on timeout. Use a state-file pattern instead.
 - **SSH-based task execution from Airflow**: Fallback only if Edge Worker can't run on the Pi. Less impressive for the demo.
 - **Lightweight/standalone edge worker**: Does not exist. The edge worker imports deeply from airflow-core (config, JWT auth, task SDK supervisor). AIP-69 acknowledges "thin deployment" as a future goal, not current reality. Full `apache-airflow` pip install is required.
+- **JSON content-based zoom status file**: Rejected — `zoom_monitor.py` initially wrote `{"status": "on_air"}` / `{"status": "free"}`. Switched to file existence (create/delete flag) so we can use `FileSensor` for the start condition and a one-line custom sensor for the end condition.
+- **`mode="reschedule"` sensors**: Broken in Airflow 3.1.8 — sensor correctly marks itself `up_for_reschedule` but the scheduler fails to honor it, leaving the task in `failed` state. Use `mode="poke"` instead. Not a resource concern for this demo.
+- **`@task.sensor` decorator**: Under consideration for deprecation in Airflow 3. Kept for now as it's the most Pythonic option, but watch for removal.
+- **Running Airflow natively on laptop for process detection**: Rejected — would require a local edge worker + native Airflow install to access macOS processes from a DAG task. The bind-mounted flag file is simpler and makes the architecture story clearer for the audience.
 
 ## Running the Stack
 
@@ -74,11 +78,13 @@ The `secret_key` config moved from `[webserver]` to `[api]` in Airflow 3. Use `A
 
 ## Key Airflow 3 Patterns
 
-- **Continuous scheduling**: DAG runs in a loop, always monitoring Zoom status
-- **Multi-executor in one DAG**: Sensor task on `LocalExecutor` (laptop), LED task on `EdgeExecutor` (Pi)
+- **Continuous scheduling**: `schedule="@continuous"` + `max_active_runs=1` + `start_date=datetime(2026, 3, 1)`. One DAG run = one meeting lifecycle. After each run completes, the scheduler immediately creates the next. **`start_date` must be a `datetime` object** — a string causes a parse error. **Never manually trigger** while the DAG is running — it creates a queued run that blocks `@continuous` from chaining.
+- **DAG structure**: `wait_for_meeting_start (sensor, poke) → set_on_air (edge) → wait_for_meeting_end (sensor, poke) → set_free (edge)`
+- **Multi-executor in one DAG**: Sensor tasks on `LocalExecutor` (laptop/Docker), LED tasks on `EdgeExecutor` (Pi)
 - **Edge task routing**: `@task(executor="edge3", queue="raspberry_pi")`
 - **Multi-executor config**: `LocalExecutor,edge3:airflow.providers.edge3.executors.EdgeExecutor` (alias required — see `docs/gotchas.md`)
 - **EdgeDBManager required**: Set `AIRFLOW__DATABASE__EXTERNAL_DB_MANAGERS=airflow.providers.edge3.models.db.EdgeDBManager` or edge DB tables won't be created
+- **Pi DAGs folder**: `~/airflow-edge-demo/dags/` (set in `~/pi-edge-env.sh`). Sync with `rsync -av dags/ airflow-demo:~/airflow-edge-demo/dags/`
 - See `docs/edge-executor.md` for details.
 
 ## Important Constraints

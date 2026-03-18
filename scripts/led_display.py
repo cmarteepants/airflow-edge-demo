@@ -22,7 +22,9 @@ from rgbmatrix import RGBMatrix, RGBMatrixOptions, graphics
 # --- Configuration ---
 
 PI_USER_HOME = "/home/constance"
-STATE_FILE = "/tmp/led-state.json"  # must be outside /home — RGBMatrix drops to uid 1 after init
+STATE_FILE = (
+    "/tmp/led-state.json"  # must be outside /home — RGBMatrix drops to uid 1 after init
+)
 FONT_DIR = os.path.join(PI_USER_HOME, "rpi-rgb-led-matrix/fonts")
 POLL_INTERVAL = 0.5  # seconds — also controls blink rate (~1Hz)
 
@@ -62,7 +64,6 @@ def draw_border(canvas, r, g, b):
     for y in range(ROWS):
         canvas.SetPixel(0, y, r, g, b)
         canvas.SetPixel(COLS - 1, y, r, g, b)
-
 
 
 def draw_on_air(canvas, font, dot_visible):

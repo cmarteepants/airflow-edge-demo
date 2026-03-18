@@ -27,11 +27,12 @@ PyCascades presentation: March 21, 2026.
 
 ## Zoom Monitor & DAG
 
-- [ ] **M2.5** Write `scripts/zoom_monitor.py` — macOS script that polls `CptHost` process, writes `/tmp/zoom-status.json`
-- [ ] **M2.6** Add bind mount for `/tmp/zoom-status.json` in Docker Compose
-- [ ] **M2.7** Write the DAG with continuous scheduling: sensor reads zoom status file (LocalExecutor), LED task writes state file on Pi (EdgeExecutor)
-- [ ] **M2.8** Tune polling intervals for demo responsiveness — target under 10s end-to-end
-- [ ] **M2.9** Test manually: start/stop Zoom call → confirm DAG detects → confirm LED updates on Pi
+- [x] **M2.5** Write `scripts/zoom_monitor.py` — creates/deletes `zoom-state/active` flag file on meeting start/end
+- [x] **M2.6** Add bind mount `./zoom-state:/tmp/zoom-state:ro` in Docker Compose
+- [x] **M2.7** Write the DAG: `wait_for_meeting_start → set_on_air → wait_for_meeting_end → set_free`, `@continuous` scheduling, `mode="poke"` sensors
+- [x] **M2.8** `scripts/zoom-sim.sh` — simulate Zoom start/end/status for testing without real Zoom
+- [ ] **M2.9** Tune polling intervals for demo responsiveness — target under 10s end-to-end (current: ~5s sensor poll + edge worker latency)
+- [ ] **M2.10** Test with real Zoom: join call → confirm LED shows ON AIR → leave → confirm FREE
 
 ## End-to-End Testing & Polish
 

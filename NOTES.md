@@ -215,3 +215,50 @@ M1.10 (systemd) and M1.13 (DAG sync automation) can wait until hardening phase.
 3. M2.7 — Write the DAG: continuous scheduling, sensor reads zoom status (LocalExecutor), LED task on Pi (EdgeExecutor)
 4. M2.8 — Tune intervals
 5. M2.9 — First end-to-end test: join/leave Zoom → LED updates
+
+---
+
+## Session 5 — March 18, 2026
+
+### What's working
+
+- **`scripts/zoom_monitor.py`** — creates/deletes `zoom-state/active` flag file on meeting start/end
+- **`scripts/zoom-sim.sh`** — simulate Zoom start/end/status for testing without real Zoom
+- **`zoom-state/` directory** — committed to repo with `.gitkeep`, bind-mounted into Docker as `/tmp/zoom-state:ro`
+- **`dags/led_sign_dag.py`** — fully written and validated:
+  - `@dag` TaskFlow style, `@continuous` + `max_active_runs=1` + `start_date=datetime(2026, 3, 1)`
+  - `wait_for_meeting_start (poke sensor) → set_on_air (edge) → wait_for_meeting_end (poke sensor) → set_free (edge)`
+  - Scheduler auto-creates next run after each completes ✓
+- **End-to-end pipeline tested with zoom-sim.sh**:
+  - `zoom-sim.sh start` → sensor fires → `set_on_air` runs on Pi → LED shows ON AIR ✓
+  - `zoom-sim.sh end` → sensor fires → `set_free` runs on Pi → LED shows FREE ✓
+  - `@continuous` auto-chains next scheduled run after completion ✓
+- **LED display service** — starts manually on Pi, reads state file, drives panel correctly
+
+### What's not working / not done
+
+- LED display service must be started manually on Pi each session (`nohup sudo /usr/bin/python3 ~/airflow-edge-demo/scripts/led_display.py > ~/led-display.log 2>&1 &`)
+- Edge worker must be started manually on Pi each session (`source ~/pi-edge-env.sh && nohup airflow edge worker -q raspberry_pi -c 1 > ~/edge-worker.log 2>&1 &`)
+- No test with real Zoom yet (only zoom-sim.sh)
+- M1.9 (passwordless sudo), M1.10 (systemd services), M1.13 (DAG sync automation) deferred to hardening
+
+### Gotchas learned
+
+- `mode="reschedule"` broken in Airflow 3.1.8 — sensor marks `up_for_reschedule` but scheduler fails to honor it → `failed`. Use `mode="poke"`.
+- `@continuous` requires `start_date=datetime(...)`, not a string — string causes `AttributeError: 'str' object has no attribute 'utcoffset'`
+- Never manually trigger `led_sign` while running — queued run blocks `@continuous` from chaining. Delete it with `af runs delete` if it happens.
+- Pi DAGs folder is `~/airflow-edge-demo/dags/` (not `~/dags/`) — wrong rsync target causes `Dag not found during start up` on edge worker
+- `FileSensor` only checks file existence, not content — use file existence as the signal (create/delete) rather than JSON content
+- `@task.sensor` is under consideration for deprecation in Airflow 3 — kept for now
+
+### Open questions
+
+- [ ] LED brightness tuning for stage lighting (may need adjustment before March 21)
+
+### Next session: start here
+
+**Test with real Zoom + hardening.** Priority:
+1. Start LED display service and edge worker on Pi
+2. Test with a real Zoom call: join → LED ON AIR, leave → LED FREE
+3. M4.4 — Document startup sequence (what to launch and in what order at the venue)
+4. M4.9/M4.10 — passwordless sudo + systemd services on Pi (prevents needing SSH at the venue)

@@ -138,6 +138,9 @@ celerybeat.pid
 logs/
 !logs/.gitkeep
 
+# Zoom meeting flag file (created/deleted at runtime)
+zoom-state/active
+
 # Environments and secrets
 .env
 config/simple_auth_passwords.json
