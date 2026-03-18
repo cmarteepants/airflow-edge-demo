@@ -50,7 +50,7 @@ The Edge Worker requires a **full `apache-airflow` pip install**. It uses the Ai
 
 ```bash
 pip install apache-airflow==3.0.0
-pip install apache-airflow-providers-edge3
+pip install apache-airflow-providers-edge3==3.2.0
 ```
 
 ### Configure (environment variables)

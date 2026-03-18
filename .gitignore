@@ -134,8 +134,13 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
+# Airflow logs
+logs/
+!logs/.gitkeep
+
+# Environments and secrets
 .env
+config/simple_auth_passwords.json
 .envrc
 .venv
 env/
